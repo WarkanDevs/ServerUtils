@@ -3,14 +3,20 @@ package net.frankheijden.serverutils.velocity;
 import com.google.inject.Inject;
 import com.google.inject.name.Named;
 import com.velocitypowered.api.event.Subscribe;
+import com.velocitypowered.api.event.proxy.ListenerBoundEvent;
 import com.velocitypowered.api.event.proxy.ProxyInitializeEvent;
 import com.velocitypowered.api.event.proxy.ProxyShutdownEvent;
+import com.velocitypowered.api.network.ListenerType;
 import com.velocitypowered.api.plugin.Plugin;
 import com.velocitypowered.api.plugin.PluginContainer;
 import com.velocitypowered.api.plugin.annotation.DataDirectory;
 import com.velocitypowered.api.proxy.ProxyServer;
 import java.io.IOException;
+import java.net.InetSocketAddress;
 import java.nio.file.Path;
+import java.util.HashMap;
+import java.util.Map;
+
 import net.frankheijden.serverutils.common.ServerUtilsApp;
 import net.frankheijden.serverutils.velocity.entities.VelocityPlugin;
 import net.frankheijden.serverutils.velocity.managers.VelocityPluginCommandManager;
@@ -32,6 +38,9 @@ public class ServerUtils {
     private static final String PLUGIN_COMMANDS_CACHE = ".pluginCommandsCache.json";
 
     private VelocityPlugin plugin;
+
+    // Save all listener to recall ListenerBoundEvent later when needed.
+    public Map<ListenerType, InetSocketAddress> proxyListeners = new HashMap<>();
 
     @Inject
     private ProxyServer proxy;
@@ -96,6 +105,12 @@ public class ServerUtils {
         } catch (IOException ex) {
             ex.printStackTrace();
         }
+    }
+
+    @Subscribe
+    public void onListenerBound(ListenerBoundEvent event) {
+        // Store this for later ListenerBoundEvent call for new loaded plugins.
+        proxyListeners.put(event.getListenerType(), event.getAddress());
     }
 
     public static ServerUtils getInstance() {

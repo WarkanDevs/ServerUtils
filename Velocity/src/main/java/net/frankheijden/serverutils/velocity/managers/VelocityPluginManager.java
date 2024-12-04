@@ -8,6 +8,7 @@ import com.mojang.brigadier.tree.CommandNode;
 import com.velocitypowered.api.command.CommandManager;
 import com.velocitypowered.api.event.EventManager;
 import com.velocitypowered.api.event.permission.PermissionsSetupEvent;
+import com.velocitypowered.api.event.proxy.ListenerBoundEvent;
 import com.velocitypowered.api.event.proxy.ProxyInitializeEvent;
 import com.velocitypowered.api.event.proxy.ProxyShutdownEvent;
 import com.velocitypowered.api.permission.PermissionFunction;
@@ -20,6 +21,7 @@ import com.velocitypowered.api.proxy.ProxyServer;
 import com.velocitypowered.api.scheduler.ScheduledTask;
 import java.io.Closeable;
 import java.io.File;
+import java.io.IOException;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
@@ -32,6 +34,7 @@ import net.frankheijden.serverutils.common.entities.results.PluginResults;
 import net.frankheijden.serverutils.common.entities.results.Result;
 import net.frankheijden.serverutils.common.events.PluginEvent;
 import net.frankheijden.serverutils.common.managers.AbstractPluginManager;
+import net.frankheijden.serverutils.velocity.ServerUtils;
 import net.frankheijden.serverutils.velocity.entities.VelocityPluginDescription;
 import net.frankheijden.serverutils.velocity.events.VelocityPluginDisableEvent;
 import net.frankheijden.serverutils.velocity.events.VelocityPluginEnableEvent;
@@ -174,10 +177,21 @@ public class VelocityPluginManager extends AbstractPluginManager<PluginContainer
         }
 
         RVelocityEventManager.fireForPlugins(
-                proxy.getEventManager(),
-                new ProxyInitializeEvent(),
-                pluginInstances
+            proxy.getEventManager(),
+            new ProxyInitializeEvent(),
+            pluginInstances,
+            containers.getFirst()
         ).join();
+
+        // Some plugins like Geyser uses this event for startup.
+        ServerUtils.getInstance().proxyListeners.forEach((listenerType, address) -> {
+            RVelocityEventManager.fireForPlugins(
+                    proxy.getEventManager(),
+                    new ListenerBoundEvent(address, listenerType),
+                    pluginInstances,
+                    containers.getFirst()
+            ).join();
+        });
 
         ConsoleCommandSource console = proxy.getConsoleCommandSource();
         PermissionsSetupEvent event = new PermissionsSetupEvent(
@@ -185,9 +199,10 @@ public class VelocityPluginManager extends AbstractPluginManager<PluginContainer
                 s -> PermissionFunction.ALWAYS_TRUE
         );
         PermissionFunction permissionFunction = RVelocityEventManager.fireForPlugins(
-                proxy.getEventManager(),
-                event,
-                pluginInstances
+            proxy.getEventManager(),
+            event,
+            pluginInstances,
+            containers.getFirst()
         ).join().createFunction(console);
 
         if (permissionFunction == null) {
@@ -232,10 +247,11 @@ public class VelocityPluginManager extends AbstractPluginManager<PluginContainer
         }
 
         RVelocityEventManager.fireForPlugins(
-                proxy.getEventManager(),
-                new ProxyShutdownEvent(),
-                pluginInstances
-        );
+            proxy.getEventManager(),
+            new ProxyShutdownEvent(),
+            pluginInstances,
+            containers.getFirst()
+        ).join(); // For some reason join() was not used originally, but it is required to await plugin deactivation...
 
         for (PluginContainer container : containers) {
             proxy.getEventManager().fire(new VelocityPluginDisableEvent(container, PluginEvent.Stage.POST));
@@ -288,7 +304,12 @@ public class VelocityPluginManager extends AbstractPluginManager<PluginContainer
 
     @Override
     public List<PluginContainer> getPlugins() {
-        return new ArrayList<>(proxy.getPluginManager().getPlugins());
+        // In newer versions, Velocity uses a self-plugin called velocity
+        // and velocity plugin do not have a source path, so it is not
+        // possible to re-load this internal plugin.
+        //
+        // As workaround, velocity plugin is excluded from plugins list.
+        return proxy.getPluginManager().getPlugins().stream().filter((p) -> !p.getDescription().getId().equals("velocity")).toList();
     }
 
     @Override

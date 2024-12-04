@@ -55,9 +55,10 @@ public class RVelocityEventManager {
      * Fires an event specifically for one plugin.
      */
     public static <E> CompletableFuture<E> fireForPlugins(
-            EventManager manager,
-            E event,
-            List<Object> pluginInstances
+        EventManager manager,
+        E event,
+        List<Object> pluginInstances,
+        PluginContainer pluginContainer
     ) {
         List<Object> registrations = getRegistrationsByPlugins(manager, pluginInstances, event.getClass());
         CompletableFuture<E> future = new CompletableFuture<>();
@@ -65,7 +66,7 @@ public class RVelocityEventManager {
         Object registrationsEmptyArray = Array.newInstance(RHandlerRegistration.reflection.getClazz(), 0);
         Class<?> registrationsArrayClass = registrationsEmptyArray.getClass();
 
-        ExecutorService executor = reflection.invoke(manager, "getAsyncExecutor");
+        ExecutorService executor = pluginContainer.getExecutorService();
         executor.execute(() -> reflection.invoke(
                 manager,
                 "fire",

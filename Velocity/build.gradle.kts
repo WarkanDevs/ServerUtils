@@ -14,6 +14,7 @@ base {
 repositories {
     maven("https://nexus.velocitypowered.com/repository/maven-public/")
     maven("https://libraries.minecraft.net")
+    maven("https://repo.papermc.io/repository/maven-public/")
 }
 
 dependencies {
@@ -23,10 +24,9 @@ dependencies {
     implementation("net.kyori:adventure-text-minimessage:${VersionConstants.adventureMinimessageVersion}") {
         exclude("net.kyori", "adventure-api")
     }
-    compileOnly("com.velocitypowered:velocity-api:3.1.2-SNAPSHOT")
-    compileOnly("com.velocitypowered:velocity-brigadier:1.0.0-SNAPSHOT")
-    compileOnly("com.electronwill.night-config:toml:3.6.3")
-    annotationProcessor("com.velocitypowered:velocity-api:3.1.2-SNAPSHOT")
+    compileOnly("com.velocitypowered:velocity-api:3.4.0-SNAPSHOT")
+    compileOnly("com.electronwill.night-config:toml:3.8.1")
+    annotationProcessor("com.velocitypowered:velocity-api:3.4.0-SNAPSHOT")
 }
 
 tasks {
