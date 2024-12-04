@@ -4,6 +4,7 @@ import com.google.inject.Inject;
 import com.google.inject.name.Named;
 import com.velocitypowered.api.event.Subscribe;
 import com.velocitypowered.api.event.proxy.ListenerBoundEvent;
+import com.velocitypowered.api.event.proxy.ListenerCloseEvent;
 import com.velocitypowered.api.event.proxy.ProxyInitializeEvent;
 import com.velocitypowered.api.event.proxy.ProxyShutdownEvent;
 import com.velocitypowered.api.network.ListenerType;
@@ -111,6 +112,12 @@ public class ServerUtils {
     public void onListenerBound(ListenerBoundEvent event) {
         // Store this for later ListenerBoundEvent call for new loaded plugins.
         proxyListeners.put(event.getListenerType(), event.getAddress());
+    }
+
+    @Subscribe
+    public void onListenerClose(ListenerCloseEvent event) {
+        // If closed, remove this from the saved list.
+        proxyListeners.remove(event.getListenerType());
     }
 
     public static ServerUtils getInstance() {
